@@ -175,6 +175,66 @@ void ObjPlane( in TRay Ray, inout THit Hit )
 }
 
 //------------------------------------------------------------------------------
+void ObjCube( in TRay Ray, inout THit Hit )                                    // 立方体
+{
+  float t, tx1, tx2, ty1, ty2 ,tz1, tz2;
+  const float infinity = 1. / 0.;
+
+  if(Ray.Vec.x==0)
+  {
+    tx1=-infinity;
+    tx2=infinity;
+  } else {
+    tx1 = min((-1-Ray.Pos.x)/Ray.Vec.x,(1-Ray.Pos.x)/Ray.Vec.x);
+    tx2 = max((-1-Ray.Pos.x)/Ray.Vec.x,(1-Ray.Pos.x)/Ray.Vec.x);
+  }
+
+  if(Ray.Vec.y==0)
+  {
+    ty1=-infinity;
+    ty2=infinity;
+  } else {
+    ty1 = min((-1-Ray.Pos.y)/Ray.Vec.y,(1-Ray.Pos.y)/Ray.Vec.y);
+    ty2 = max((-1-Ray.Pos.y)/Ray.Vec.y,(1-Ray.Pos.y)/Ray.Vec.y);
+  }
+
+  if(Ray.Vec.z==0)
+  {
+    tz1=-infinity;
+    tz2=infinity;
+  } else {
+    tz1 = min((-1-Ray.Pos.z)/Ray.Vec.z,(1-Ray.Pos.z)/Ray.Vec.z);
+    tz2 = max((-1-Ray.Pos.z)/Ray.Vec.z,(1-Ray.Pos.z)/Ray.Vec.z);
+  }
+
+
+
+  if ( max(max(tx1, ty1),tz1) <= min(min(tx2, ty2),tz2) )
+  {
+    t = max(max(tx1, ty1),tz1);
+
+    if ( ( 0 < t ) && ( t < Hit.t ) && t==tx1)
+    {
+      Hit.t   = t;
+      Hit.Pos = Ray.Pos + t * Ray.Vec;
+      Hit.Nor = vec4( 1, 0, 0, 0 );
+      Hit.Mat = 2;
+    } else if ( ( 0 < t ) && ( t < Hit.t ) && t==ty1)
+    {
+      Hit.t   = t;
+      Hit.Pos = Ray.Pos + t * Ray.Vec;
+      Hit.Nor = vec4( 0, 1, 0, 0 );
+      Hit.Mat = 2;
+    } else if ( ( 0 < t ) && ( t < Hit.t ) && t==tz1)
+    {
+      Hit.t   = t;
+      Hit.Pos = Ray.Pos + t * Ray.Vec;
+      Hit.Nor = vec4( 0, 0, 1, 0 );
+      Hit.Mat = 2;
+    }
+  }
+}
+
 
 void ObjSpher( in TRay Ray, inout THit Hit )
 {
@@ -280,8 +340,8 @@ void Raytrace( inout TRay Ray )
 
     ///// 物体
 
-    ObjSpher( Ray, Hit );
-    ObjPlane( Ray, Hit );
+    ObjCube( Ray, Hit );
+    //ObjPlane( Ray, Hit );
 
     ///// 材質
 
