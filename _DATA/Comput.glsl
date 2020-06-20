@@ -259,6 +259,7 @@ layout( std430 ) buffer TCamera
 };
 
 uniform sampler2D _Textur;
+uniform sampler2D _Textur2;
 
 //$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$【型】
 
@@ -326,7 +327,7 @@ void ObjSpher( in TRay Ray, inout THit Hit )
       Hit.t   = t;
       Hit.Pos = Ray.Pos + t * Ray.Vec;
       Hit.Nor = Hit.Pos;
-      Hit.Mat = 2;
+      Hit.Mat = 4;
     }
   }
 }
@@ -568,6 +569,34 @@ bool MatDiffu( inout TRay Ray, in THit Hit )
 
 //$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
+float atan2(in float y, in float x)
+{
+    return x == 0.0 ? sign(y)*Pi/2 : atan(y, x);
+}
+vec2 get_sphere_uv( in vec3 Vec ) {
+    vec2 Result;
+    float phi = atan2(Vec.z, Vec.x);
+    float theta = asin(Vec.y);
+    Result.x = (phi + Pi) / (2.f * Pi);
+    Result.y = (theta + Pi / 2.f) / Pi;
+    return Result;
+}
+
+
+bool MatTexturesphere( inout TRay Ray, in THit Hit )
+{
+  Ray.Emi = texture( _Textur2, get_sphere_uv( Ray.Vec ) ).rgb;
+
+  return true;
+}
+
+
+
+
+
+
+
+
 void Raytrace( inout TRay Ray )
 {
   int  L;
@@ -579,10 +608,10 @@ void Raytrace( inout TRay Ray )
 
     ///// 物体
 
-    ObjPlane( Ray, Hit );
-    //ObjSpher( Ray, Hit );
+    //ObjPlane( Ray, Hit );
+    ObjSpher( Ray, Hit );
     //ObjRecta( Ray, Hit );
-    ObjPrimi( Ray, Hit );
+    //ObjPrimi( Ray, Hit );
 
     ///// 材質
 
@@ -592,6 +621,7 @@ void Raytrace( inout TRay Ray )
       case 1: if ( MatMirro( Ray, Hit ) ) break; else return;
       case 2: if ( MatWater( Ray, Hit ) ) break; else return;
       case 3: if ( MatDiffu( Ray, Hit ) ) break; else return;
+      case 4: if ( MatTexturesphere( Ray, Hit ) ) break; else return;
     }
   }
 }
@@ -631,6 +661,22 @@ void main()
   }
 
   imageStore( _Accumr, _WorkID.xy, vec4( A, 1 ) );
+
+  /*barrier(); //すべてのスレッドが _Accumr を書き終わるまで待つ。
+  uint X, Y, W;
+  vec3 A2;
+  W = 10;
+  A2 = vec3( 0 );
+  for ( Y = _WorkID.y-W; Y <= _WorkID.y+W; Y++ )
+  {
+    for ( X = _WorkID.x-W; X < _WorkID.x+W; X++ )
+    {
+      A2 += imageLoad( _Accumr, ivec2( X, Y ) ).rgb;
+    }
+  }
+  A2 /= Pow2( W+1+W );
+  A2 = pow(A2, vec3(4));
+  A += A2;*/
 
   P = GammaCorrect( ToneMap( A, 10 ), 2.2 );
 
