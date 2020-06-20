@@ -1021,7 +1021,23 @@ void main()
 
   imageStore( _Accumr, _WorkID.xy, vec4( A, 1 ) );
 
-  P = GammaCorrect( ToneMap( A, 10 ), 2.2 );
+  barrier(); //すべてのスレッドが _Accumr を書き終わるまで待つ。
+  uint X, Y, W;
+  vec3 A2;
+  W = 10;
+  A2 = vec3( 0 );
+  for ( Y = _WorkID.y-W; Y <= _WorkID.y+W; Y++ )
+  {
+    for ( X = _WorkID.x-W; X < _WorkID.x+W; X++ )
+    {
+      A2 += imageLoad( _Accumr, ivec2( X, Y ) ).rgb;
+    }
+  }
+  A2 /= Pow2( W+1+W );
+  A2 = pow(A2, vec3(4));
+  A2 += A;
+
+  P = GammaCorrect( ToneMap( A2, 10 ), 2.2 );
 
   imageStore( _Imager, _WorkID.xy, vec4( P, 1 ) );
 
