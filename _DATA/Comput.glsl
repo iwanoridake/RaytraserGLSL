@@ -331,6 +331,67 @@ void ObjSpher( in TRay Ray, inout THit Hit )
     }
   }
 }
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% ObjCube
+void ObjCube( in TRay Ray, inout THit Hit )                                    // 立方体
+{
+  float t, tx1, tx2, ty1, ty2 ,tz1, tz2;
+  const float infinity = 1. / 0.;
+
+  if(Ray.Vec.x==0)
+  {
+    tx1=-infinity;
+    tx2=infinity;
+  } else {
+    tx1 = min((-1-Ray.Pos.x)/Ray.Vec.x,(1-Ray.Pos.x)/Ray.Vec.x);
+    tx2 = max((-1-Ray.Pos.x)/Ray.Vec.x,(1-Ray.Pos.x)/Ray.Vec.x);
+  }
+
+  if(Ray.Vec.y==0)
+  {
+    ty1=-infinity;
+    ty2=infinity;
+  } else {
+    ty1 = min((-1-Ray.Pos.y)/Ray.Vec.y,(1-Ray.Pos.y)/Ray.Vec.y);
+    ty2 = max((-1-Ray.Pos.y)/Ray.Vec.y,(1-Ray.Pos.y)/Ray.Vec.y);
+  }
+
+  if(Ray.Vec.z==0)
+  {
+    tz1=-infinity;
+    tz2=infinity;
+  } else {
+    tz1 = min((-1-Ray.Pos.z)/Ray.Vec.z,(1-Ray.Pos.z)/Ray.Vec.z);
+    tz2 = max((-1-Ray.Pos.z)/Ray.Vec.z,(1-Ray.Pos.z)/Ray.Vec.z);
+  }
+
+
+
+  if ( max(max(tx1, ty1),tz1) <= min(min(tx2, ty2),tz2) )
+  {
+    t = max(max(tx1, ty1),tz1);
+
+    if ( ( 0 < t ) && ( t < Hit.t ) && t==tx1)
+    {
+      Hit.t   = t;
+      Hit.Pos = Ray.Pos + t * Ray.Vec;
+      Hit.Nor = vec3( 1, 0, 0);
+      Hit.Mat = 5;
+    } else if ( ( 0 < t ) && ( t < Hit.t ) && t==ty1)
+    {
+      Hit.t   = t;
+      Hit.Pos = Ray.Pos + t * Ray.Vec;
+      Hit.Nor = vec3( 0, 1, 0);
+      Hit.Mat = 5;
+    } else if ( ( 0 < t ) && ( t < Hit.t ) && t==tz1)
+    {
+      Hit.t   = t;
+      Hit.Pos = Ray.Pos + t * Ray.Vec;
+      Hit.Nor = vec3( 0, 0, 1);
+      Hit.Mat = 5;
+    }
+  }
+}
+
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% ObjRecta
 
@@ -576,7 +637,7 @@ float atan2(in float y, in float x)
 vec2 get_sphere_uv( in vec3 Vec ) {
     vec2 Result;
     float phi = atan2(Vec.z, Vec.x);
-    float theta = asin(Vec.y);
+    float theta = atan2(Vec.y, sqrt(Pow2(Vec.x)+Pow2(Vec.z)));
     Result.x = (phi + Pi) / (2.f * Pi);
     Result.y = (theta + Pi / 2.f) / Pi;
     return Result;
@@ -585,11 +646,10 @@ vec2 get_sphere_uv( in vec3 Vec ) {
 
 bool MatTexturesphere( inout TRay Ray, in THit Hit )
 {
-  Ray.Emi = texture( _Textur2, get_sphere_uv( Ray.Vec ) ).rgb;
+  Ray.Emi += texture( _Textur2, get_sphere_uv( Hit.Pos ) ).rgb;
 
   return true;
 }
-
 
 
 
@@ -608,7 +668,7 @@ void Raytrace( inout TRay Ray )
 
     ///// 物体
 
-    //ObjPlane( Ray, Hit );
+    ObjPlane( Ray, Hit );
     ObjSpher( Ray, Hit );
     //ObjRecta( Ray, Hit );
     //ObjPrimi( Ray, Hit );
@@ -622,6 +682,7 @@ void Raytrace( inout TRay Ray )
       case 2: if ( MatWater( Ray, Hit ) ) break; else return;
       case 3: if ( MatDiffu( Ray, Hit ) ) break; else return;
       case 4: if ( MatTexturesphere( Ray, Hit ) ) break; else return;
+      //case 5: if ( MatTextureCube( Ray, Hit ) ) break; else return;
     }
   }
 }
@@ -662,21 +723,31 @@ void main()
 
   imageStore( _Accumr, _WorkID.xy, vec4( A, 1 ) );
 
-  /*barrier(); //すべてのスレッドが _Accumr を書き終わるまで待つ。
-  uint X, Y, W;
+  barrier(); //すべてのスレッドが _Accumr を書き終わるまで待つ。
+  uint X, Y, W, W2;
   vec3 A2;
-  W = 10;
+  const float GaussWeights[7] ={
+       0.003,
+       0.048,
+       0.262,
+       0.415,
+       0.262,
+       0.048,
+       0.003
+    };
+  W = 50;
+  W2 = 7;
   A2 = vec3( 0 );
   for ( Y = _WorkID.y-W; Y <= _WorkID.y+W; Y++ )
   {
-    for ( X = _WorkID.x-W; X < _WorkID.x+W; X++ )
+    for ( X = _WorkID.x-W2; X < _WorkID.x+W2; X++ )
     {
-      A2 += imageLoad( _Accumr, ivec2( X, Y ) ).rgb;
+      A2 += imageLoad( _Accumr, ivec2( X, Y ) ).rgb /* * GaussWeights[X-(_WorkID.x-W)]*GaussWeights[Y-(_WorkID.y-W)]*/;
     }
   }
-  A2 /= Pow2( W+1+W );
+  A2 /= Pow2( W+1+W2 );
   A2 = pow(A2, vec3(4));
-  A += A2;*/
+  A += A2;
 
   P = GammaCorrect( ToneMap( A, 10 ), 2.2 );
 

@@ -153,7 +153,7 @@ begin
      _Imager.Grid.CellsY := _ImageY;
 
      _Textur.Imager.LoadFromFileHDR( '..\..\_DATA\Luxo-Jr_2000x1000.hdr' );
-     _Textur2.Imager.LoadFromFile( '..\..\_DATA\Lava.png' );
+     _Textur2.Imager.LoadFromFile( '..\..\_DATA\Lava2.png' );
 
      _MouseA.X := -60;
      _MouseA.Y := +10;
